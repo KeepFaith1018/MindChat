@@ -12,7 +12,9 @@ const envSchema = z.object({
         message: 'NUXT_PUBLIC_API_BASE must be an absolute URL or start with /'
       }
     )
-    .default('/api')
+    .default('/api'),
+  // 数据库连接字符串校验
+  DATABASE_URL: z.string().url({ message: 'DATABASE_URL 校验失败' })
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
@@ -33,7 +35,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       appName: env.NUXT_PUBLIC_APP_NAME,
-      apiBase: env.NUXT_PUBLIC_API_BASE
+      apiBase: env.NUXT_PUBLIC_API_BASE,
+      databaseUrl: env.DATABASE_URL
     }
   }
 })

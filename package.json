@@ -7,6 +7,11 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
+    "db:generate": "dotenv -e .env -- prisma generate",
+    "db:migrate": "dotenv -e .env -- prisma migrate dev",
+    "db:seed": "dotenv -e .env -- tsx server/db/seed.ts",
+    "db:studio": "dotenv -e .env -- prisma studio",
+    "db:push": "dotenv -e .env -- prisma db push",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxt typecheck",
@@ -19,6 +24,9 @@
   },
   "dependencies": {
     "@nuxt/eslint": "1.15.2",
+    "@prisma/adapter-pg": "^7.4.2",
+    "@prisma/client": "^7.4.2",
+    "dotenv": "^17.3.1",
     "nuxt": "^4.3.1",
     "vue": "^3.5.30",
     "vue-router": "^4.6.4"
@@ -26,12 +34,16 @@
   "devDependencies": {
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
+    "@types/node": "^25.4.0",
+    "dotenv-cli": "^11.0.0",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.3.3",
     "only-allow": "^1.2.2",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "prisma": "^7.4.2",
+    "tsx": "^4.21.0",
     "vue-tsc": "^3.2.5",
     "zod": "^4.3.6"
   },

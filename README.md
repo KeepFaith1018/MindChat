@@ -28,7 +28,37 @@ pnpm dev
 cp .env.example .env
 ```
 
+配置 `.env` 中的 `DATABASE_URL` 为您的 PostgreSQL 连接字符串。
+
+### 4. 数据库同步与初始化
+
+```bash
+# 生成 Prisma 客户端
+pnpm run db:generate
+
+# 执行数据库迁移 (首次运行)
+npx prisma migrate dev --name init
+
+# 填充种子数据
+pnpm run db:seed
+```
+
 ---
+
+## 🏗 开发进度 (Development Progress)
+
+### 第一阶段：基础设施与认证
+
+- [x] 数据库 Schema 设计 (Prisma + PostgreSQL)
+- [x] 数据库时区修复 (Timestamptz 适配)
+- [ ] 用户认证 API (注册/登录/JWT)
+- [ ] 前端 Auth Composables 与路由守卫
+
+### 第二阶段：核心聊天引擎
+
+- [ ] SSE 服务端代理 (API Key 保护)
+- [ ] 前端流式解析器 (Thinking/Tool/Content)
+- [ ] 消息状态机管理
 
 ## 🛠 工程规范
 

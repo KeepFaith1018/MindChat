@@ -1,0 +1,29 @@
+# Docker Compose 配置
+# PostgreSQL 数据库
+
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: docker.m.daocloud.io/postgres:16-alpine
+    container_name: mindchat-postgres
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      POSTGRES_USER: mindchat
+      POSTGRES_PASSWORD: mindchat123
+      POSTGRES_DB: mindchat
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mindchat']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
