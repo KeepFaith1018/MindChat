@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+@plugin '@tailwindcss/typography';
+
+/* 从 npm 包导入字体 */
+@import '@fontsource/inter';
+@import '@fontsource/noto-sans-sc';
+
+:root {
+  --font-sans: 'Inter', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+}
+
+body {
+  @apply bg-white text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
+}

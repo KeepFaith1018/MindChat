@@ -1,6 +1,13 @@
+<script setup lang="ts">
+// 初始化主题
+useTheme()
+</script>
+
 <template>
-  <div>
-    <NuxtRouteAnnouncer />
-    <NuxtWelcome />
-  </div>
+  <BaseLoadingScreen />
+  <UApp>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </UApp>
 </template>

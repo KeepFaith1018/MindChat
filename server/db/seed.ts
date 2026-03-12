@@ -16,7 +16,7 @@ async function main() {
   // await prisma.user.deleteMany()
 
   // 2. 创建默认用户 (邮箱: admin@example.com, 密码: admin123)
-  const adminUser = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: 'admin@example.com',
       passwordHash: '$2b$10$exampleHash12345678901234567890123456789012' // 密码: admin123
