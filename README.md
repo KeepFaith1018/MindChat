@@ -52,6 +52,8 @@ pnpm run db:seed
 - [x] 数据库 Schema 设计 (Prisma + PostgreSQL)
 - [x] 数据库时区修复 (Timestamptz 适配)
 - [x] 用户认证基础 (Token 持久化与 Cookie 管理)
+- [x] **后端认证 API**: 注册、登录、登出、用户信息 (双 Token 机制)
+- [x] **OAuth 集成**: GitHub、Google 第三方登录与账号关联
 - [x] 前端 Auth Composables 基础实现
 
 ### 第二阶段：UI/UX 与 移动端适配
@@ -80,6 +82,7 @@ pnpm run db:seed
 6. [06-前端工程规范化指南](doc/06-前端工程规范化指南.md)
 7. [07-开发进度与路线图](doc/07-开发进度与路线图.md)
 8. [08-认证界面专项设计](doc/08-认证界面专项设计.md)
+9. [09-后端认证模块接口设计与实现方案](doc/09-后端认证模块接口设计与实现方案.md)
 
 ---
 

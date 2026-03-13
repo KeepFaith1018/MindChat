@@ -3,6 +3,7 @@ import { prisma } from '../../db/prismaClient'
 import { verifyPassword } from '../../utils/password'
 import { signUserToken } from '../../utils/jwt'
 import { successResponse } from '../../utils/http'
+import { setAuthCookies } from '../../utils/cookie'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -11,13 +12,12 @@ const loginSchema = z.object({
 
 /**
  * 用户登录接口
- * @description 验证邮箱密码并返回 JWT Token
+ * @description 验证邮箱密码并返回 JWT Token (通过 Cookie)
  * @method POST
  * @path /api/auth/login
  * @param {string} email - 用户邮箱
  * @param {string} password - 用户密码
  * @returns {object} user - 用户信息 (不含密码)
- * @returns {string} token - JWT Token
  */
 export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, loginSchema.parse)
@@ -42,14 +42,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const token = await signUserToken(user)
+  const tokens = await signUserToken(user)
+  setAuthCookies(event, tokens)
 
   const { passwordHash: _passwordHash, ...userWithoutPassword } = user
 
   return successResponse(
     {
-      user: userWithoutPassword,
-      token
+      user: userWithoutPassword
     },
     '登录成功'
   )

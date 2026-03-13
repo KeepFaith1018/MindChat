@@ -1,14 +1,15 @@
 import { prisma } from '../../../db/prismaClient'
 import { signUserToken } from '../../../utils/jwt'
+import { setAuthCookies } from '../../../utils/cookie'
 
 /**
  * GitHub OAuth 回调接口
- * @description 处理 GitHub 授权回调，创建或关联用户，并生成 JWT
+ * @description 处理 GitHub 授权回调，创建或关联用户，并生成 JWT (通过 Cookie)
  * @method GET
  * @path /api/auth/github/callback
  * @query {string} code - GitHub 授权码
  * @query {string} state - 状态码 (用于防 CSRF)
- * @returns {void} 重定向到前端并携带 Token
+ * @returns {void} 重定向到首页
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -73,7 +74,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 5. 数据库逻辑
-  let user = await prisma.user.findFirst({
+  const existingUser = await prisma.user.findFirst({
     where: {
       OR: [
         { email: primaryEmail },
@@ -83,47 +84,60 @@ export default defineEventHandler(async (event) => {
     include: { accounts: true }
   })
 
-  if (!user) {
-    // 创建新用户
-    user = await prisma.user.create({
-      data: {
-        email: primaryEmail,
-        name: githubUser.name || githubUser.login,
-        avatarUrl: githubUser.avatar_url,
-        accounts: {
-          create: {
-            provider: 'github',
-            providerId: String(githubUser.id),
-            accessToken: tokenResponse.access_token
+  let user: { id: string; email: string }
+
+  if (!existingUser) {
+    // 创建新用户并初始化配额
+    // 使用事务确保数据一致性
+    user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          email: primaryEmail,
+          name: githubUser.name || githubUser.login,
+          avatarUrl: githubUser.avatar_url,
+          accounts: {
+            create: {
+              provider: 'github',
+              providerId: String(githubUser.id),
+              accessToken: tokenResponse.access_token
+            }
           }
         }
-      },
-      include: { accounts: true }
+      })
+
+      // 初始化配额
+      await tx.usageQuota.create({
+        data: {
+          userId: newUser.id,
+          dailyTokenLimit: 500000
+        }
+      })
+
+      return newUser
     })
   } else {
-    // 更新或创建 account
-    const githubAccount = user.accounts.find((a) => a.provider === 'github')
-    if (!githubAccount) {
+    user = existingUser
+    // 更新或关联 Account
+    const githubAccount = existingUser.accounts.find((a) => a.provider === 'github')
+    if (githubAccount) {
+      await prisma.account.update({
+        where: { id: githubAccount.id },
+        data: { accessToken: tokenResponse.access_token }
+      })
+    } else {
       await prisma.account.create({
         data: {
-          userId: user.id,
+          userId: existingUser.id,
           provider: 'github',
           providerId: String(githubUser.id),
           accessToken: tokenResponse.access_token
         }
       })
-    } else {
-      await prisma.account.update({
-        where: { id: githubAccount.id },
-        data: { accessToken: tokenResponse.access_token }
-      })
     }
   }
 
-  // 6. 生成 Token 并重定向
-  const token = await signUserToken(user)
+  const tokens = await signUserToken(user)
+  setAuthCookies(event, tokens)
 
-  // 重定向回前端，带上 token (通常建议放在 Cookie 中或通过 URL 参数，这里根据需求决定)
-  // 为了方便前端处理，我们重定向到 /auth/callback?token=...
-  return sendRedirect(event, `/auth/callback?token=${token}`)
+  return sendRedirect(event, '/')
 })
