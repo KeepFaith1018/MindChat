@@ -1,4 +1,5 @@
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
+import { ref, watch } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   // 使用我们的自定义存储钩子进行持久化
@@ -13,6 +14,19 @@ export const useAppStore = defineStore('app', () => {
   watch(isSidebarOpen, (val) => {
     sidebarOpenState.value = val
   })
+
+  // 仅在客户端：从存储同步回状态（以防 localStorage 中已有值）
+  if (import.meta.client) {
+    watch(
+      sidebarOpenState,
+      (val) => {
+        if (isSidebarOpen.value !== val) {
+          isSidebarOpen.value = val
+        }
+      },
+      { immediate: true }
+    )
+  }
 
   // 移动端侧边栏状态
   const isMobileMenuOpen = ref(false)
@@ -44,20 +58,20 @@ export const useAppStore = defineStore('app', () => {
   function openMobileMenu() {
     isMobileMenuOpen.value = true
   }
-
+  function setLoading(val: boolean) {
+    isLoading.value = val
+  }
   return {
-    isSidebarOpen,
+    isSidebarOpen: skipHydrate(isSidebarOpen),
     isMobileMenuOpen,
     isLoading,
-    themeMode,
-    primaryColor,
+    themeMode: skipHydrate(themeMode),
+    primaryColor: skipHydrate(primaryColor),
     toggleSidebar,
     closeMobileMenu,
     openMobileMenu,
     setThemeMode,
     setPrimaryColor,
-    setLoading(val: boolean) {
-      isLoading.value = val
-    }
+    setLoading
   }
 })

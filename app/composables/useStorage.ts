@@ -13,57 +13,78 @@ export function useStorage<T>(key: string, initialValue: T) {
 
   // 仅在客户端运行以避免水合不匹配
   if (import.meta.client) {
-    // 尝试在挂载时从 localStorage 加载
-    try {
-      const storedValue = localStorage.getItem(key)
-      if (storedValue !== null) {
-        // 如果可能，解析 JSON，否则使用字符串
-        try {
-          data.value = JSON.parse(storedValue)
-        } catch {
-          data.value = storedValue as unknown as T
-        }
-      }
-    } catch (e) {
-      console.warn(`Error reading localStorage key "${key}":`, e)
-    }
-
-    // 监听更改并更新 localStorage
-    watch(
-      data,
-      (newValue) => {
-        try {
-          if (newValue === null || newValue === undefined) {
-            localStorage.removeItem(key)
-          } else {
-            localStorage.setItem(key, JSON.stringify(newValue))
+    const setupStorage = () => {
+      // 尝试从 localStorage 加载
+      try {
+        const storedValue = localStorage.getItem(key)
+        if (storedValue !== null) {
+          try {
+            data.value = JSON.parse(storedValue)
+          } catch {
+            data.value = storedValue as unknown as T
           }
-        } catch (e) {
-          console.warn(`Error writing localStorage key "${key}":`, e)
         }
-      },
-      { deep: true }
-    )
+      } catch (e) {
+        console.warn(`Error reading localStorage key "${key}":`, e)
+      }
 
-    // 监听来自其他标签页的更改
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === key && event.newValue !== null) {
-        try {
-          data.value = JSON.parse(event.newValue)
-        } catch {
-          data.value = event.newValue as unknown as T
+      // 监听更改并更新 localStorage
+      watch(
+        data,
+        (newValue) => {
+          try {
+            if (newValue === null || newValue === undefined) {
+              localStorage.removeItem(key)
+            } else {
+              localStorage.setItem(key, JSON.stringify(newValue))
+            }
+          } catch (e) {
+            console.warn(`Error writing localStorage key "${key}":`, e)
+          }
+        },
+        { deep: true }
+      )
+
+      // 监听来自其他标签页的更改
+      const handleStorage = (event: StorageEvent) => {
+        if (event.key === key && event.newValue !== null) {
+          try {
+            data.value = JSON.parse(event.newValue)
+          } catch {
+            data.value = event.newValue as unknown as T
+          }
+        }
+      }
+      window.addEventListener('storage', handleStorage)
+
+      // 清理逻辑
+      const cleanup = () => {
+        window.removeEventListener('storage', handleStorage)
+      }
+
+      // 安全地注册清理逻辑
+      try {
+        // Pinia Store 和 Vue 组件都有 EffectScope，这是更通用的清理方式
+        onScopeDispose(cleanup)
+      } catch {
+        // 如果不在任何 Scope 中，尝试在组件卸载时清理
+        if (getCurrentInstance()) {
+          onUnmounted(cleanup)
         }
       }
     }
-    window.addEventListener('storage', handleStorage)
 
-    // 卸载时清理监听器（如果在组件范围内使用）
-    try {
-      onUnmounted(() => {
-        window.removeEventListener('storage', handleStorage)
-      })
-    } catch {
-      // 如果在组件 setup 外部使用则忽略
+    /**
+     * 为了解决 Hydration Mismatch：
+     * 必须确保在客户端水合（Initial Render）完成后再修改状态。
+     */
+    if (getCurrentInstance()) {
+      // 在组件中调用时，等待挂载完成
+      onMounted(setupStorage)
+    } else {
+      // 在 Store 等全局环境调用时，使用 setTimeout(0) 将任务推迟到下一个事件循环，
+      // 此时水合过程已经结束。
+      setTimeout(setupStorage, 0)
     }
   }
 
