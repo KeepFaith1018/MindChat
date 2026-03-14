@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineNuxtConfig } from 'nuxt/config'
 import { z } from 'zod'
 
@@ -47,6 +48,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   future: {
     compatibilityVersion: 4
+  },
+  alias: {
+    share: fileURLToPath(new URL('./share', import.meta.url))
   },
   devtools: { enabled: true },
   modules: ['@nuxt/eslint', '@nuxt/ui', '@pinia/nuxt'],

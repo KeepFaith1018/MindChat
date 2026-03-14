@@ -48,25 +48,31 @@ export default defineEventHandler(async (event) => {
     })
 
     // 初始化配额: 50万 Token
-    await tx.usageQuota.create({
+    const quota = await tx.usageQuota.create({
       data: {
         userId: newUser.id,
         dailyTokenLimit: 500000
       }
     })
 
-    return newUser
+    return { ...newUser, quota }
   })
 
   const tokens = await signUserToken(user)
   setAuthCookies(event, tokens)
 
-  // 移除敏感信息
-  const { passwordHash: _passwordHash, ...userWithoutPassword } = user
+  // 移除敏感信息并序列化 BigInt
+  const { passwordHash: _passwordHash, quota: rawQuota, ...userWithoutPassword } = user
+
+  const serializedQuota = {
+    ...rawQuota,
+    totalTokenUsage: rawQuota.totalTokenUsage.toString()
+  }
 
   return successResponse(
     {
-      user: userWithoutPassword
+      user: userWithoutPassword,
+      quota: serializedQuota
     },
     '注册成功'
   )

@@ -23,7 +23,7 @@ export default defineNuxtRouteMiddleware((to) => {
    * 2. 拦截未登录用户：
    * 如果用户未登录，且当前访问的是受限页面 (如 /chat)，则重定向至登录页 (/login)
    */
-  if (!authStore.isLoggedIn && to.path === '/chat') {
+  if (!authStore.isLoggedIn && to.path.startsWith('/chat')) {
     return navigateTo(`/login?redirect=${to.fullPath}`)
   }
 })

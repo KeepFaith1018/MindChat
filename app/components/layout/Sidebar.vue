@@ -6,6 +6,7 @@ defineProps<{
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
+const authStore = useAuthStore()
 const { themeMode, setThemeMode, primaryColor, setPrimaryColor, modes, colors } = useTheme()
 
 // 模拟历史数据
@@ -23,10 +24,10 @@ function handleNewChat() {
 const userMenuItems = computed(() => [
   [
     {
-      label: 'Faith',
+      label: authStore.user?.name || authStore.user?.email || 'Guest',
       avatar: {
-        src: 'https://avatars.githubusercontent.com/u/739984?v=4',
-        alt: 'Faith'
+        src: authStore.user?.avatarUrl || 'https://avatars.githubusercontent.com/u/739984?v=4',
+        alt: authStore.user?.name || 'User'
       },
       type: 'label'
     }
@@ -77,7 +78,7 @@ const userMenuItems = computed(() => [
     {
       label: '退出登录',
       icon: 'i-lucide-log-out',
-      click: () => console.log('Logout')
+      onSelect: () => authStore.logout()
     }
   ]
 ])
@@ -174,12 +175,18 @@ const userMenuItems = computed(() => [
           class="justify-start rounded-xl px-2 py-2 hover:bg-white hover:shadow-sm dark:hover:bg-white/5"
           :class="[collapsed ? 'justify-center px-0' : '']"
         >
-          <UAvatar src="https://avatars.githubusercontent.com/u/739984?v=4" alt="Faith" size="sm" />
+          <UAvatar
+            :src="authStore.user?.avatarUrl || 'https://avatars.githubusercontent.com/u/739984?v=4'"
+            :alt="authStore.user?.name || 'User'"
+            size="sm"
+          />
           <div
             v-if="!collapsed"
             class="flex flex-1 flex-col items-start gap-0.5 overflow-hidden text-left"
           >
-            <span class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">Faith</span>
+            <span class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ authStore.user?.name || authStore.user?.email || 'Guest' }}
+            </span>
             <span class="truncate text-xs text-gray-500">Free Plan</span>
           </div>
           <UIcon v-if="!collapsed" name="i-lucide-chevron-up" class="h-4 w-4 text-gray-400" />

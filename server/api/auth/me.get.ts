@@ -43,6 +43,23 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { passwordHash: _passwordHash, ...userWithoutPassword } = user
-  return successResponse({ user: userWithoutPassword }, '获取用户信息成功')
+  // 序列化 BigInt 字段 (quota.totalTokenUsage)
+  let serializedQuota = null
+  if (user.quota) {
+    serializedQuota = {
+      ...user.quota,
+      totalTokenUsage: user.quota.totalTokenUsage.toString()
+    }
+  }
+
+  const { passwordHash: _passwordHash, quota: _quota, ...userWithoutPassword } = user
+
+  // 返回结构需符合 Share 类型 MeResponse
+  return successResponse(
+    {
+      user: userWithoutPassword,
+      quota: serializedQuota
+    },
+    '获取用户信息成功'
+  )
 })

@@ -13,7 +13,20 @@ import { setAuthCookies } from '../../../utils/cookie'
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const { code, state } = getQuery(event) as { code: string; state: string }
+  const { code, state, error, error_description } = getQuery(event) as {
+    code: string
+    state: string
+    error?: string
+    error_description?: string
+  }
+
+  // 0. 检查 OAuth 错误
+  if (error) {
+    throw createError({
+      statusCode: 400,
+      message: `GitHub 授权失败: ${error_description || error}`
+    })
+  }
 
   // 1. 验证 state
   const savedState = getCookie(event, 'github_oauth_state')
@@ -42,9 +55,10 @@ export default defineEventHandler(async (event) => {
   )
 
   if (!tokenResponse.access_token) {
+    console.error('GitHub OAuth Error:', tokenResponse)
     throw createError({
       statusCode: 401,
-      message: '换取 Access Token 失败'
+      message: '换取 Access Token 失败: ' + JSON.stringify(tokenResponse)
     })
   }
 
