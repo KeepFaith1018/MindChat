@@ -69,9 +69,12 @@ pnpm run db:seed
 
 ### 第三阶段：核心聊天引擎 (进行中)
 
-- [ ] SSE 服务端代理 (API Key 保护)
-- [ ] 前端流式解析器 (Thinking/Tool/Content)
-- [ ] 消息状态机管理
+- [x] **AI 服务集成**: LangChain + 硅基流动 (SiliconFlow)
+- [x] **后端流式接口**: `/api/chat` SSE 实现 (支持多模型切换)
+- [x] **基础设施**: SSE 协议封装、AI 模型工具类、DeepSeek R1 思考过程适配
+- [ ] 前端流式解析器 (Fetch + ReadableStream)
+- [ ] 消息状态机管理 (Thinking -> Answering)
+- [ ] Markdown 渲染与虚拟滚动
 
 ---
 

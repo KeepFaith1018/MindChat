@@ -1,29 +1,30 @@
-/**
- * Auth Middleware - 鉴权中间件 (Global)
- *
- * 职责：
- * - 拦截未登录用户访问受限页面 (如 /chat)
- * - 拦截已登录用户访问 LandingPage 并重定向至 /chat
- *
- * @module app/middleware/auth.global
- */
-
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
 
+  // 1. 如果 Pinia 中没有用户信息，尝试从后端拉取 (Cookie 自动携带)
+  if (!authStore.isLoggedIn) {
+    try {
+      await authStore.fetchUser()
+    } catch (e) {
+      console.error('Failed to fetch user:', e)
+      // 拉取失败视为未登录，不处理错误
+    }
+  }
+
+  const isLoggedIn = authStore.isLoggedIn
+  const isLoginPage = to.path === '/login' || to.path === '/'
+
   /**
-   * 1. 拦截已登录用户：
-   * 如果用户已登录，且当前访问的是首页 (/) 或登录页 (/login)，则重定向至对话页 (/chat)
+   * 已登录用户访问登录页 -> 跳转到聊天页
    */
-  if (authStore.isLoggedIn && (to.path === '/' || to.path === '/login')) {
+  if (isLoggedIn && isLoginPage) {
     return navigateTo('/chat')
   }
 
   /**
-   * 2. 拦截未登录用户：
-   * 如果用户未登录，且当前访问的是受限页面 (如 /chat)，则重定向至登录页 (/login)
+   * 未登录访问受保护页面 -> 跳转到登录页
    */
-  if (!authStore.isLoggedIn && to.path.startsWith('/chat')) {
+  if (!isLoggedIn && to.path.startsWith('/chat')) {
     return navigateTo(`/login?redirect=${to.fullPath}`)
   }
 })

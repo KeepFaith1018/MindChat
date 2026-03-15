@@ -1,93 +1,69 @@
 import { defineStore } from 'pinia'
-import type { User, UsageQuota, MeResponse, IApiResponse } from 'share/types'
+import { authApi, type LoginDto, type RegisterDto } from '~/api/auth'
+import type { User, UsageQuota } from '~/api/types'
 
 export const useAuthStore = defineStore('auth', () => {
-  // 当前登录用户信息 (使用 useState 保持 SSR 同步)
   const user = useState<User | null>('auth-user', () => null)
   const quota = useState<UsageQuota | null>('auth-quota', () => null)
 
-  // 计算属性：是否已登录
   const isLoggedIn = computed(() => !!user.value)
 
-  // 操作
-  function setUser(userData: User | null) {
-    user.value = userData
+  function setUser(data: User | null) {
+    user.value = data
   }
 
-  function setQuota(quotaData: UsageQuota | null) {
-    quota.value = quotaData
+  function setQuota(data: UsageQuota | null) {
+    quota.value = data
   }
 
-  /**
-   * 初始化/获取用户信息
-   */
+  function clearAuth() {
+    user.value = null
+    quota.value = null
+  }
+
   async function fetchUser() {
     try {
-      // 使用 $api 封装，自动处理 Token 刷新
-      const response = await $api<IApiResponse<MeResponse>>('/api/auth/me')
-      if (response.code === 200 && response.data) {
-        user.value = response.data.user
-        quota.value = response.data.quota
+      const response = await authApi.me()
+
+      if ((response.success || response.code === 0) && response.data) {
+        const { quota: quotaData, ...userData } = response.data
+
+        user.value = userData as User
+        quota.value = quotaData ?? null
       } else {
-        user.value = null
-        quota.value = null
+        clearAuth()
       }
     } catch (error) {
       console.error('Auth Store Error:', error)
-      user.value = null
-      quota.value = null
+      clearAuth()
     }
   }
 
-  /**
-   * 登录
-   */
-  async function login(credentials: { email: string; password?: string }) {
-    await $api('/api/auth/login', {
-      method: 'POST',
-      body: credentials
-    })
-    // 登录成功后拉取用户信息
+  async function login(credentials: LoginDto) {
+    await authApi.login(credentials)
     await fetchUser()
   }
 
-  /**
-   * 注册
-   */
-  async function register(data: {
-    email: string
-    password?: string
-    name?: string
-    confirmPassword?: string
-  }) {
-    await $api('/api/auth/register', {
-      method: 'POST',
-      body: data
-    })
-    // 注册成功后拉取用户信息
+  async function register(data: RegisterDto) {
+    await authApi.register(data)
     await fetchUser()
   }
 
-  /**
-   * 退出登录
-   */
   async function logout() {
     try {
-      await $api('/api/auth/logout', { method: 'POST' })
+      await authApi.logout()
     } catch (e) {
-      // 忽略登出错误，确保前端状态清除
       console.warn('Logout API failed:', e)
-    } finally {
-      user.value = null
-      quota.value = null
+    }
 
-      // 只有当前不在登录页时，才执行跳转或刷新
-      if (import.meta.client && !window.location.pathname.startsWith('/login')) {
-        // 强制刷新页面以清除所有状态
-        window.location.href = '/login'
-      } else if (import.meta.server) {
-        navigateTo('/login')
-      }
+    clearAuth()
+
+    // 强制跳转到登录页
+    if (import.meta.client) {
+      // 使用 window.location.href 强制刷新页面，以确保清除所有状态
+      window.location.href = '/login'
+    } else {
+      return navigateTo('/login')
     }
   }
 
@@ -97,6 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     setUser,
     setQuota,
+    clearAuth,
     fetchUser,
     login,
     register,

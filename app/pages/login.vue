@@ -147,8 +147,9 @@ function handleSuccessRedirect() {
  */
 function handleSocialLogin(provider: string) {
   isLoading.value = true
+  const config = useRuntimeConfig()
   // 直接跳转到后端 OAuth 接口
-  window.location.href = `/api/auth/${provider}`
+  window.location.href = `${config.public.apiAllBase}/auth/oauth/${provider}?redirect=/chat`
 }
 </script>
 
