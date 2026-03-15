@@ -20,6 +20,7 @@ definePageMeta({
 const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const toast = useToast()
 
 onMounted(() => {
   // 进入登录页后，确保 Loading 状态关闭
@@ -33,6 +34,14 @@ const items = [
   { label: '注册', icon: 'i-lucide-user-plus', value: 'register' }
 ]
 const activeTab = ref('login')
+
+// 监听 Tab 切换，重置表单
+watch(activeTab, (newVal) => {
+  if (newVal === 'login') {
+    // 切换到登录时，保留邮箱以便用户快速登录
+    loginState.email = registerState.email || loginState.email
+  }
+})
 
 // 表单架构 (Zod)
 const loginSchema = z.object({
@@ -74,9 +83,20 @@ async function onLoginSubmit(event: FormSubmitEvent<LoginSchema>) {
   isLoading.value = true
   try {
     await authStore.login(event.data)
+    toast.add({
+      title: '登录成功',
+      description: '欢迎回来！',
+      icon: 'i-lucide-check-circle',
+      color: 'primary'
+    })
     handleSuccessRedirect()
-  } catch (error) {
-    console.error('Login failed:', error)
+  } catch (error: any) {
+    toast.add({
+      title: '登录失败',
+      description: getErrorMessage(error),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
     isLoading.value = false
   }
@@ -89,9 +109,25 @@ async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
   isLoading.value = true
   try {
     await authStore.register(event.data)
-    handleSuccessRedirect()
-  } catch (error) {
-    console.error('Register failed:', error)
+
+    toast.add({
+      title: '注册成功',
+      description: '请使用新账号登录',
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+
+    // 注册成功后，切换到登录 Tab 并填充邮箱
+    activeTab.value = 'login'
+    loginState.email = registerState.email
+    loginState.password = '' // 密码留空，要求用户手动输入以确认记忆
+  } catch (error: any) {
+    toast.add({
+      title: '注册失败',
+      description: getErrorMessage(error),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
     isLoading.value = false
   }
@@ -107,15 +143,13 @@ function handleSuccessRedirect() {
 }
 
 /**
- * 第三方登录模拟
+ * 第三方登录
  */
 function handleSocialLogin(provider: string) {
   isLoading.value = true
-  // 模拟 OAuth 跳转流程
-  setTimeout(() => {
-    authStore.login({ email: `social-${provider}@example.com` })
-    handleSuccessRedirect()
-  }, 1000)
+  const config = useRuntimeConfig()
+  // 直接跳转到后端 OAuth 接口
+  window.location.href = `${config.public.apiAllBase}/auth/oauth/${provider}?redirect=/chat`
 }
 </script>
 
@@ -135,7 +169,7 @@ function handleSocialLogin(provider: string) {
       <!-- Logo & 标题 -->
       <div class="mb-8 flex flex-col items-center text-center">
         <div class="relative mb-4 flex h-16 w-16 items-center justify-center">
-          <div class="bg-primary-500/10 absolute inset-0 animate-pulse rounded-full blur-xl"/>
+          <div class="bg-primary-500/10 absolute inset-0 animate-pulse rounded-full blur-xl" />
           <UIcon name="i-lucide-bot" class="text-primary-500 h-12 w-12" />
         </div>
         <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">MindChat</h1>
@@ -255,7 +289,7 @@ function handleSocialLogin(provider: string) {
         <!-- 分隔线 -->
         <div class="relative my-6">
           <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-200 dark:border-gray-800"/>
+            <div class="w-full border-t border-gray-200 dark:border-gray-800" />
           </div>
           <div class="relative flex justify-center text-xs uppercase">
             <span class="bg-white px-2 text-gray-500 dark:bg-gray-900">或者使用</span>

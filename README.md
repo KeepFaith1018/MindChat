@@ -52,19 +52,29 @@ pnpm run db:seed
 - [x] 数据库 Schema 设计 (Prisma + PostgreSQL)
 - [x] 数据库时区修复 (Timestamptz 适配)
 - [x] 用户认证基础 (Token 持久化与 Cookie 管理)
-- [x] 前端 Auth Composables 基础实现
+- [x] **后端认证 API**: 注册、登录、登出、用户信息 (双 Token 机制)
+- [x] **OAuth 集成**: GitHub、Google 第三方登录与账号关联
+- [x] **前后端对接完成**:
+  - [x] 统一 API 错误处理 ($api 封装)
+  - [x] 全局路由守卫 (未登录拦截/已登录重定向)
+  - [x] 双 Token 刷新机制 (Access/Refresh)
+  - [x] 用户交互反馈 (Toast 通知/Loading 状态)
 
 ### 第二阶段：UI/UX 与 移动端适配
 
 - [x] **移动端响应式布局**: 修复对话页移动端侧边栏显示与交互问题
 - [x] **UI 交互增强**: 侧边栏设置项高亮、登录页全宽输入框、Soft UI 圆角优化
 - [x] **性能优化**: 缩短首屏 Loading 延时，加速页面跳转逻辑
+- [x] **消息提示优化**: 全局 Toast 组件位置调整与样式统一
 
 ### 第三阶段：核心聊天引擎 (进行中)
 
-- [ ] SSE 服务端代理 (API Key 保护)
-- [ ] 前端流式解析器 (Thinking/Tool/Content)
-- [ ] 消息状态机管理
+- [x] **AI 服务集成**: LangChain + 硅基流动 (SiliconFlow)
+- [x] **后端流式接口**: `/api/chat` SSE 实现 (支持多模型切换)
+- [x] **基础设施**: SSE 协议封装、AI 模型工具类、DeepSeek R1 思考过程适配
+- [ ] 前端流式解析器 (Fetch + ReadableStream)
+- [ ] 消息状态机管理 (Thinking -> Answering)
+- [ ] Markdown 渲染与虚拟滚动
 
 ---
 
@@ -80,6 +90,7 @@ pnpm run db:seed
 6. [06-前端工程规范化指南](doc/06-前端工程规范化指南.md)
 7. [07-开发进度与路线图](doc/07-开发进度与路线图.md)
 8. [08-认证界面专项设计](doc/08-认证界面专项设计.md)
+9. [09-后端认证模块接口设计与实现方案](doc/09-后端认证模块接口设计与实现方案.md)
 
 ---
 

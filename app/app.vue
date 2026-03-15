@@ -5,7 +5,7 @@ useTheme()
 
 <template>
   <BaseLoadingScreen />
-  <UApp>
+  <UApp :toaster="{ position: 'top-right' }">
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

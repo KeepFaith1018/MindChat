@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useChatStore } from '~/stores/useChatStore'
+
 interface Props {
   loading?: boolean
   mode?: 'centered' | 'bottom'
+  disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -10,25 +13,44 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   send: [content: string]
+  stop: []
 }>()
 
+const chatStore = useChatStore()
 const content = ref('')
 
-// 模拟模型
+// 实际模型列表
 const models = [
-  { label: 'DeepSeek R1', value: 'deepseek-r1', icon: 'i-lucide-brain' },
-  { label: 'GPT-4o', value: 'gpt-4o', icon: 'i-lucide-sparkles' },
-  { label: 'Claude 3.5 Sonnet', value: 'claude-3-5-sonnet', icon: 'i-lucide-zap' }
+  { label: 'DeepSeek V3', value: 'deepseek-ai/DeepSeek-V3', icon: 'i-lucide-brain' },
+  { label: 'DeepSeek R1', value: 'deepseek-ai/DeepSeek-R1', icon: 'i-lucide-brain-circuit' },
+  { label: 'Qwen 2.5 72B', value: 'Qwen/Qwen2.5-72B-Instruct', icon: 'i-lucide-sparkles' },
+  { label: 'Yi 1.5 34B', value: '01-ai/Yi-1.5-34B-Chat-16K', icon: 'i-lucide-zap' }
 ]
-const selectedModel = ref(models[0])
+
+const selectedModel = computed({
+  get: () => models.find((m) => m.value === chatStore.currentModel) || models[0],
+  set: (val) => {
+    if (val) chatStore.currentModel = val.value
+  }
+})
 
 function handleSend() {
-  if (!content.value.trim() || props.loading) return
+  if (!content.value.trim() || props.loading || props.disabled) return
   emit('send', content.value)
   content.value = ''
+  // Reset height
+  nextTick(() => {
+    const textarea = document.querySelector('textarea')
+    if (textarea) textarea.style.height = '56px'
+  })
+}
+
+function handleStop() {
+  emit('stop')
 }
 
 function handleKeydown(e: KeyboardEvent) {
+  if (props.disabled) return
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
     handleSend()
@@ -57,6 +79,7 @@ function handleInput(e: Event) {
       <textarea
         v-model="content"
         rows="1"
+        :disabled="props.disabled"
         :placeholder="mode === 'centered' ? '想问点什么？' : '输入消息...'"
         class="max-h-64 w-full resize-none border-none bg-transparent px-3 py-3 text-base leading-6 focus:ring-0 focus:outline-none dark:text-gray-100"
         style="min-height: 56px"
@@ -74,17 +97,18 @@ function handleInput(e: Event) {
                 label: m.label,
                 icon: m.icon,
                 click: () => (selectedModel = m),
-                checked: selectedModel!.value === m.value
+                checked: selectedModel ? selectedModel.value === m.value : false
               }))
             ]"
             :ui="{ content: 'w-48 rounded-xl' }"
           >
             <UButton
-              :icon="selectedModel!.icon"
-              :label="selectedModel!.label"
+              :icon="selectedModel?.icon || 'i-lucide-box'"
+              :label="selectedModel?.label || 'Model'"
               variant="ghost"
               color="neutral"
               size="xs"
+              :disabled="props.disabled"
               class="rounded-lg bg-white/50 px-2 py-1 text-xs font-medium dark:bg-white/5"
             />
           </UDropdownMenu>
@@ -94,21 +118,28 @@ function handleInput(e: Event) {
             variant="ghost"
             color="neutral"
             size="sm"
+            :disabled="props.disabled"
             class="rounded-lg"
           />
         </div>
 
-        <!-- 右侧：发送按钮 -->
+        <!-- 发送按钮 -->
         <UButton
-          :icon="loading ? 'i-lucide-loader-2' : 'i-lucide-arrow-up'"
-          :color="content.trim() ? 'primary' : 'neutral'"
-          variant="solid"
+          v-if="!loading"
+          icon="i-lucide-arrow-up"
+          color="primary"
           size="sm"
-          class="rounded-xl transition-all"
-          :class="[content.trim() ? '' : 'opacity-50']"
-          :loading="loading"
-          :disabled="!content.trim() || loading"
+          class="rounded-xl transition-all hover:scale-105 active:scale-95"
+          :disabled="props.disabled || !content.trim()"
           @click="handleSend"
+        />
+        <UButton
+          v-else
+          icon="i-lucide-square"
+          color="error"
+          size="sm"
+          class="animate-pulse rounded-xl transition-all hover:scale-105 active:scale-95"
+          @click="handleStop"
         />
       </div>
     </div>
