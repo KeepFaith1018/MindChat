@@ -146,10 +146,65 @@ function handleSuccessRedirect() {
  * 第三方登录
  */
 function handleSocialLogin(provider: string) {
-  isLoading.value = true
   const config = useRuntimeConfig()
-  // 直接跳转到后端 OAuth 接口
-  window.location.href = `${config.public.apiAllBase}/auth/oauth/${provider}?redirect=/chat`
+
+  // 1. 定义弹窗参数
+  const width = 600
+  const height = 700
+  const left = (window.screen.width - width) / 2
+  const top = (window.screen.height - height) / 2
+
+  // 2. 打开弹窗 (直接请求后端跳转接口)
+  // 注意：redirect 参数指向前端的回调处理页
+  const callbackUrl = encodeURIComponent('/auth/callback')
+  const authUrl = `${config.public.apiAllBase}/auth/oauth/${provider}?redirect=${callbackUrl}`
+
+  const popup = window.open(
+    authUrl,
+    'SocialLogin',
+    `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`
+  )
+
+  if (!popup) {
+    toast.add({ title: '弹窗被拦截，请允许弹窗后重试', color: 'warning' })
+    return
+  }
+
+  // 3. 监听消息
+  const messageHandler = async (event: MessageEvent) => {
+    // 安全检查：校验来源是否为当前域名
+    if (event.origin !== window.location.origin) return
+
+    if (event.data?.type === 'AUTH_SUCCESS') {
+      // 移除监听
+      window.removeEventListener('message', messageHandler)
+
+      // 4. 成功后逻辑：同步用户信息并跳转
+      try {
+        await authStore.fetchUser()
+        toast.add({ title: '登录成功', color: 'success' })
+        handleSuccessRedirect()
+      } catch (e) {
+        console.log(e)
+        toast.add({ title: '同步用户信息失败', color: 'error' })
+      }
+    }
+
+    if (event.data?.type === 'AUTH_ERROR') {
+      window.removeEventListener('message', messageHandler)
+      toast.add({ title: event.data.message || '登录失败', color: 'error' })
+    }
+  }
+
+  window.addEventListener('message', messageHandler)
+
+  // 轮询检查弹窗是否关闭
+  const timer = setInterval(() => {
+    if (popup.closed) {
+      clearInterval(timer)
+      window.removeEventListener('message', messageHandler)
+    }
+  }, 1000)
 }
 </script>
 

@@ -9,12 +9,6 @@ function handleToggleSidebar() {
     appStore.openMobileMenu()
   }
 }
-
-// 分享功能模拟
-function handleShare() {
-  // TODO: 实现分享功能
-  console.log('Share clicked')
-}
 </script>
 
 <template>
@@ -23,10 +17,6 @@ function handleShare() {
   >
     <div class="flex items-center gap-3">
       <UButton icon="i-lucide-menu" variant="ghost" color="neutral" @click="handleToggleSidebar" />
-    </div>
-
-    <div class="flex items-center gap-2">
-      <UButton icon="i-lucide-share" variant="ghost" color="neutral" @click="handleShare" />
     </div>
   </header>
 </template>

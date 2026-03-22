@@ -19,7 +19,10 @@ const editingTitle = ref('')
 
 // 初始化加载会话
 onMounted(() => {
-  chatStore.loadConversations()
+  // 只有在 store 中没数据时才加载，避免覆盖 SSR 预取的数据
+  if (chatStore.conversations.length === 0) {
+    chatStore.loadConversations()
+  }
 })
 
 function handleNewChat() {

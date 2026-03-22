@@ -47,6 +47,7 @@ export interface Message {
   status?: MessageStatus // 仅 assistant 消息有此状态
   createdAt: string
   toolCalls?: any[]
+  toolResults?: ToolResultPayload[] // 支持多个工具调用结果
 }
 
 // 会话结构
@@ -64,4 +65,36 @@ export interface PaginatedList<T> {
   page: number
   pageSize: number
   totalPages: number
+}
+
+// 模型配置
+export interface ModelConfig {
+  id: string
+  name: string
+  provider: string
+  capabilities: {
+    webSearch: boolean
+    reasoning: boolean
+    fileQa: boolean
+  }
+}
+
+// 聊天能力开关状态
+export interface ChatCapabilities {
+  webSearch: boolean
+  reasoning: boolean
+  fileQa: boolean
+}
+
+// 工具调用结果 payload
+export interface ToolResultPayload {
+  tool: string // 'web_search'
+  query?: string
+  items?: Array<{
+    title: string
+    url: string
+    snippet: string
+    source?: string
+  }>
+  images?: string[]
 }

@@ -42,6 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(credentials: LoginDto) {
     await authApi.login(credentials)
     await fetchUser()
+    await navigateTo('/chat')
   }
 
   async function register(data: RegisterDto) {
@@ -63,7 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
       // 使用 window.location.href 强制刷新页面，以确保清除所有状态
       window.location.href = '/login'
     } else {
-      return navigateTo('/login')
+      return navigateTo('/login', { replace: true })
     }
   }
 

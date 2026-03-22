@@ -1,7 +1,12 @@
 import { $api } from '../utils/api'
-import type { Conversation, PaginatedList, Message } from './types'
+import type { Conversation, PaginatedList, Message, ChatCapabilities } from './types'
 
 export const chatApi = {
+  /**
+   * 获取当前模型支持的能力
+   */
+  getCapabilities: () => $api<ChatCapabilities>('/chat/capabilities', { method: 'GET' }),
+
   createConversation: (payload?: { modelId?: string }) =>
     $api<Conversation>('/conversations', {
       method: 'POST',

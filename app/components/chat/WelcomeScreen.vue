@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useChatStore } from '~/stores/useChatStore'
+
+const chatStore = useChatStore()
 const emit = defineEmits<{
   send: [content: string]
 }>()
@@ -27,20 +30,11 @@ function handleSend(content: string) {
       <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">MindChat</h1>
     </div>
 
-    <ChatInputBox mode="centered" :disabled="props.disabled" @send="handleSend" />
-
-    <div class="mt-8 flex flex-wrap justify-center gap-2">
-      <UButton
-        v-for="text in ['写一段 Python 代码', '解释量子纠缠', '帮我写个周报']"
-        :key="text"
-        :label="text"
-        color="neutral"
-        variant="subtle"
-        size="xs"
-        :disabled="props.disabled"
-        class="rounded-full px-3 transition-transform hover:scale-105"
-        @click="handleSend(text)"
-      />
-    </div>
+    <ChatInputBox
+      mode="centered"
+      :disabled="props.disabled"
+      :loading="chatStore.isGenerating"
+      @send="handleSend"
+    />
   </div>
 </template>

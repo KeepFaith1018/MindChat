@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { useChatStore } from '~/stores/useChatStore'
+import { useModelStore } from '~/stores/useModelStore'
+import { useFileStore } from '~/stores/useFileStore'
+import { useFileDialog } from '@vueuse/core'
+import FileList from './FileList.vue'
 
 interface Props {
   loading?: boolean
@@ -17,21 +21,104 @@ const emit = defineEmits<{
 }>()
 
 const chatStore = useChatStore()
+const modelStore = useModelStore()
+const fileStore = useFileStore()
 const content = ref('')
+const isUploading = ref(false)
+const isComposing = ref(false)
 
-// 实际模型列表
-const models = [
-  { label: 'DeepSeek V3', value: 'deepseek-ai/DeepSeek-V3', icon: 'i-lucide-brain' },
-  { label: 'DeepSeek R1', value: 'deepseek-ai/DeepSeek-R1', icon: 'i-lucide-brain-circuit' },
-  { label: 'Qwen 2.5 72B', value: 'Qwen/Qwen2.5-72B-Instruct', icon: 'i-lucide-sparkles' },
-  { label: 'Yi 1.5 34B', value: '01-ai/Yi-1.5-34B-Chat-16K', icon: 'i-lucide-zap' }
-]
+const isMounted = ref(false)
+onMounted(() => {
+  console.log('[InputBox] onMounted')
+  isMounted.value = true
+  if (!modelStore.isInitialized) {
+    console.log('[InputBox] loading models')
+    modelStore.loadModels()
+  }
+})
+
+// 文件选择
+const { open, onChange } = useFileDialog({
+  multiple: false, // 暂时只支持单文件上传，避免并发问题
+  accept: '.pdf,.doc,.docx,.txt,.md' // 限制类型
+})
+
+onChange(async (files) => {
+  if (!files || files.length === 0) return
+
+  const file = files[0]
+  if (!file) return
+
+  // 简单校验大小 (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    // 这里最好用 toast 提示
+    console.warn('文件大小不能超过 10MB')
+    return
+  }
+
+  isUploading.value = true
+  await fileStore.uploadFile(file)
+  isUploading.value = false
+})
+
+// 动态计算模型列表
+const models = computed(() => {
+  // 如果 store 已加载数据（不论是接口还是兜底），优先使用
+  if (modelStore.availableModels.length > 0) {
+    return modelStore.availableModels.map((m) => {
+      const normalizedId = (m.id || '').toLowerCase()
+      return {
+        label: m.name || 'Unknown',
+        value: m.id,
+        icon: normalizedId.includes('deepseek') ? 'i-lucide-brain-circuit' : 'i-lucide-sparkles'
+      }
+    })
+  }
+
+  // 这里的兜底仅用于 store 彻底初始化前的极短瞬间，或者 fallbackModels 也为空的情况
+  return [
+    { label: 'DeepSeek V3.2', value: 'deepseek-ai/DeepSeek-V3.2', icon: 'i-lucide-brain' },
+    { label: 'DeepSeek R1', value: 'deepseek-ai/DeepSeek-R1', icon: 'i-lucide-brain-circuit' }
+  ]
+})
 
 const selectedModel = computed({
-  get: () => models.find((m) => m.value === chatStore.currentModel) || models[0],
+  get: () => {
+    const current = modelStore.currentModel
+    return (
+      models.value.find((m) => m.value === current) ||
+      models.value[0] || {
+        label: 'DeepSeek V3.2',
+        value: 'deepseek-ai/DeepSeek-V3.2',
+        icon: 'i-lucide-brain'
+      }
+    )
+  },
   set: (val) => {
-    if (val) chatStore.currentModel = val.value
+    if (val?.value) {
+      chatStore.selectModel(val.value)
+    }
   }
+})
+
+const modelMenuItems = computed(() => {
+  const current = selectedModel.value?.value
+  return [
+    models.value.map((m) => {
+      const checked = current === m.value
+      return {
+        label: m.label,
+        icon: checked ? 'i-lucide-check-circle-2' : m.icon,
+        class: checked
+          ? 'bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-300 font-medium rounded-lg'
+          : '',
+        onSelect: (e: Event) => {
+          e.preventDefault()
+          chatStore.selectModel(m.value)
+        }
+      }
+    })
+  ]
 })
 
 function handleSend() {
@@ -49,12 +136,29 @@ function handleStop() {
   emit('stop')
 }
 
+function isMacPlatform() {
+  if (!import.meta.client) return false
+  return /Mac|iPhone|iPad|iPod/i.test(window.navigator.platform)
+}
+
 function handleKeydown(e: KeyboardEvent) {
   if (props.disabled) return
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    handleSend()
-  }
+  if (isComposing.value || e.isComposing || (e as any).keyCode === 229) return
+  if (e.key !== 'Enter') return
+
+  const allowNewline = isMacPlatform() ? e.altKey : e.shiftKey
+  if (allowNewline) return
+
+  e.preventDefault()
+  handleSend()
+}
+
+function handleCompositionStart() {
+  isComposing.value = true
+}
+
+function handleCompositionEnd() {
+  isComposing.value = false
 }
 
 function handleInput(e: Event) {
@@ -85,41 +189,110 @@ function handleInput(e: Event) {
         style="min-height: 56px"
         @keydown="handleKeydown"
         @input="handleInput"
+        @compositionstart="handleCompositionStart"
+        @compositionend="handleCompositionEnd"
       />
+
+      <!-- 文件列表 -->
+      <FileList :files="fileStore.currentFiles" @remove="fileStore.removeFile" />
 
       <!-- 底部工具栏 -->
       <div class="flex items-center justify-between px-2 pb-1">
         <!-- 左侧：模型选择器和附件 -->
         <div class="flex items-center gap-2">
           <UDropdownMenu
-            :items="[
-              models.map((m) => ({
-                label: m.label,
-                icon: m.icon,
-                click: () => (selectedModel = m),
-                checked: selectedModel ? selectedModel.value === m.value : false
-              }))
-            ]"
-            :ui="{ content: 'w-48 rounded-xl' }"
+            v-if="isMounted"
+            :items="modelMenuItems"
+            :ui="{ content: 'w-56 rounded-xl' }"
           >
             <UButton
               :icon="selectedModel?.icon || 'i-lucide-box'"
-              :label="selectedModel?.label || 'Model'"
+              :label="modelStore.isLoadingModels ? '加载中...' : selectedModel?.label || 'Model'"
               variant="ghost"
-              color="neutral"
+              :color="modelStore.fetchError ? 'error' : 'neutral'"
               size="xs"
-              :disabled="props.disabled"
+              :disabled="props.disabled || modelStore.isLoadingModels"
+              :loading="modelStore.isLoadingModels"
               class="rounded-lg bg-white/50 px-2 py-1 text-xs font-medium dark:bg-white/5"
-            />
+            >
+              <template v-if="modelStore.fetchError" #trailing>
+                <UTooltip :text="modelStore.fetchError">
+                  <UIcon name="i-lucide-circle-alert" class="text-error-500 size-3" />
+                </UTooltip>
+              </template>
+            </UButton>
           </UDropdownMenu>
+          <UButton
+            v-else
+            icon="i-lucide-box"
+            label="Loading..."
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            disabled
+            class="rounded-lg bg-white/50 px-2 py-1 text-xs font-medium dark:bg-white/5"
+          />
+
+          <!-- 能力开关 -->
+          <div class="flex items-center gap-1 border-l border-gray-200 pl-2 dark:border-gray-800">
+            <UTooltip text="联网搜索">
+              <UButton
+                :icon="
+                  modelStore.enabledCapabilities.webSearch ? 'i-lucide-globe' : 'i-lucide-globe'
+                "
+                :color="modelStore.enabledCapabilities.webSearch ? 'primary' : 'neutral'"
+                variant="ghost"
+                size="sm"
+                :disabled="
+                  !isMounted || props.disabled || !modelStore.currentCapabilities.webSearch
+                "
+                :class="[
+                  modelStore.enabledCapabilities.webSearch
+                    ? 'bg-primary-50 dark:bg-primary-950/30'
+                    : ''
+                ]"
+                @click="
+                  modelStore.enabledCapabilities.webSearch =
+                    !modelStore.enabledCapabilities.webSearch
+                "
+              />
+            </UTooltip>
+
+            <UTooltip text="深度思考">
+              <UButton
+                :icon="
+                  modelStore.enabledCapabilities.reasoning
+                    ? 'i-lucide-brain-circuit'
+                    : 'i-lucide-brain-circuit'
+                "
+                :color="modelStore.enabledCapabilities.reasoning ? 'primary' : 'neutral'"
+                variant="ghost"
+                size="sm"
+                :disabled="
+                  !isMounted || props.disabled || !modelStore.currentCapabilities.reasoning
+                "
+                :class="[
+                  modelStore.enabledCapabilities.reasoning
+                    ? 'bg-primary-50 dark:bg-primary-950/30'
+                    : ''
+                ]"
+                @click="
+                  modelStore.enabledCapabilities.reasoning =
+                    !modelStore.enabledCapabilities.reasoning
+                "
+              />
+            </UTooltip>
+          </div>
 
           <UButton
             icon="i-lucide-paperclip"
             variant="ghost"
             color="neutral"
             size="sm"
-            :disabled="props.disabled"
+            :loading="isUploading"
+            :disabled="props.disabled || isUploading"
             class="rounded-lg"
+            @click="open()"
           />
         </div>
 
